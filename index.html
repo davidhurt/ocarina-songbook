@@ -516,54 +516,113 @@
   let flashTimer;
   function flash(i) { clearTimeout(flashTimer); setHighlight(i); flashTimer = setTimeout(() => { if (!playing && practiceIdx < 0) setHighlight(-1); }, 380); }
 
-  /* ---------- Audio (synthesised ocarina-like tone) ---------- */
-  let ctx, master;
+  /* ---------- Audio: modelled ocarina ----------
+     An ocarina is a vessel flute: an almost pure sine with very weak overtones,
+     a constant breath noise that resonates at the played pitch, a soft "chiff"
+     as air hits the edge, a slight upward pitch scoop on attack, and a gentle
+     vibrato/tremolo that eases in. Played in a small stone-room reverb. */
+  let ctx, master, noiseBuf;
+  function makeNoise(seconds) {
+    // Pink-ish noise (Paul Kellet filter) — softer and more breath-like than white noise.
+    const len = ctx.sampleRate * seconds | 0, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (let i = 0; i < len; i++) {
+      const w = Math.random() * 2 - 1;
+      b0 = .99886 * b0 + w * .0555179; b1 = .99332 * b1 + w * .0750759; b2 = .969 * b2 + w * .153852;
+      b3 = .8665 * b3 + w * .3104856; b4 = .55 * b4 + w * .5329522; b5 = -.7616 * b5 - w * .016898;
+      d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * .5362) * .11; b6 = w * .115926;
+    }
+    return buf;
+  }
+  function makeImpulse(seconds, decay) {
+    const len = ctx.sampleRate * seconds | 0, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = ir.getChannelData(c); let lp = 0;
+      for (let i = 0; i < len; i++) {
+        lp += 0.35 * ((Math.random() * 2 - 1) - lp);               // darken the tail
+        d[i] = lp * Math.pow(1 - i / len, decay) * (i < 80 ? i / 80 : 1);
+      }
+    }
+    return ir;
+  }
   function ensureAudio() {
     if (!ctx) {
       try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch {}
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       ctx = new AC();
-      master = ctx.createGain(); master.gain.value = 0.55;
-      // gentle room reverb via feedback delay
-      const delay = ctx.createDelay(); delay.delayTime.value = 0.19;
-      const fb = ctx.createGain(); fb.gain.value = 0.28;
-      const wet = ctx.createGain(); wet.gain.value = 0.25;
-      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2400;
-      master.connect(ctx.destination);
-      master.connect(delay); delay.connect(lp); lp.connect(fb); fb.connect(delay); lp.connect(wet); wet.connect(ctx.destination);
+      noiseBuf = makeNoise(2);
+      master = ctx.createGain(); master.gain.value = 0.7;
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.2;
+      const verb = ctx.createConvolver(); verb.buffer = makeImpulse(2.4, 3);
+      const wet = ctx.createGain(); wet.gain.value = 0.32;
+      const pre = ctx.createDelay(); pre.delayTime.value = 0.025;
+      master.connect(comp);
+      master.connect(pre); pre.connect(verb); verb.connect(wet); wet.connect(comp);
+      comp.connect(ctx.destination);
     }
     if (ctx.state === "suspended") ctx.resume();
   }
   function tone(freq, dur, when = 0) {
     if (!ctx) return;
-    const t0 = ctx.currentTime + when;
-    const out = ctx.createGain(); out.gain.value = 0;
-    const filt = ctx.createBiquadFilter(); filt.type = "lowpass"; filt.frequency.value = freq * 4; filt.Q.value = 0.7;
-    const o1 = ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = freq;
-    const o2 = ctx.createOscillator(); o2.type = "triangle"; o2.frequency.value = freq * 2;
-    const g2 = ctx.createGain(); g2.gain.value = 0.08;
-    // vibrato that eases in
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 5.2;
-    const lfoG = ctx.createGain(); lfoG.gain.setValueAtTime(0, t0); lfoG.gain.linearRampToValueAtTime(freq * 0.008, t0 + Math.min(0.35, dur));
-    lfo.connect(lfoG); lfoG.connect(o1.frequency); lfoG.connect(o2.frequency);
-    // breath noise
-    const nb = ctx.createBuffer(1, Math.max(1, ctx.sampleRate * 0.25 | 0), ctx.sampleRate);
-    const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1);
-    const noise = ctx.createBufferSource(); noise.buffer = nb;
-    const nf = ctx.createBiquadFilter(); nf.type = "bandpass"; nf.frequency.value = freq * 2; nf.Q.value = 1.5;
-    const ng = ctx.createGain(); ng.gain.setValueAtTime(0.06, t0); ng.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
-    noise.connect(nf); nf.connect(ng); ng.connect(out);
+    const t0 = ctx.currentTime + when, end = t0 + dur;
+    const atk = 0.045, rel = Math.min(0.14, dur * 0.4);
+    const voice = ctx.createGain(); voice.gain.value = 0; voice.connect(master);
 
-    o1.connect(filt); o2.connect(g2); g2.connect(filt); filt.connect(out); out.connect(master);
-    const a = 0.035, rel = 0.12, end = t0 + dur;
-    out.gain.setValueAtTime(0, t0);
-    out.gain.linearRampToValueAtTime(0.9, t0 + a);
-    out.gain.setTargetAtTime(0.7, t0 + a, 0.08);
-    out.gain.setValueAtTime(0.7, Math.max(t0 + a, end - rel));
-    out.gain.linearRampToValueAtTime(0, end);
-    [o1, o2, lfo].forEach(o => { o.start(t0); o.stop(end + 0.05); });
-    noise.start(t0); noise.stop(t0 + 0.25);
+    // Body: fundamental + faint 2nd/3rd partials, through a soft lowpass
+    const body = ctx.createBiquadFilter(); body.type = "lowpass"; body.frequency.value = freq * 3.2; body.Q.value = 0.5;
+    body.connect(voice);
+    const partials = [[1, 1], [2, 0.045], [3, 0.03]];
+    const oscs = partials.map(([m, g]) => {
+      const o = ctx.createOscillator(); o.type = "sine";
+      // pitch scoop: start ~25 cents flat, settle quickly; tiny drop on release
+      o.frequency.setValueAtTime(freq * m * 0.986, t0);
+      o.frequency.exponentialRampToValueAtTime(freq * m, t0 + 0.07);
+      o.frequency.setValueAtTime(freq * m, Math.max(t0 + 0.07, end - rel));
+      o.frequency.exponentialRampToValueAtTime(freq * m * 0.993, end + 0.02);
+      const og = ctx.createGain(); og.gain.value = g; o.connect(og); og.connect(body);
+      return o;
+    });
+
+    // Delayed vibrato (pitch) + tremolo (volume)
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 4.8 + Math.random() * 0.6;
+    const vib = ctx.createGain(); const vibOn = Math.min(end, t0 + 0.28);
+    vib.gain.setValueAtTime(0, t0); vib.gain.setValueAtTime(0, vibOn); vib.gain.linearRampToValueAtTime(freq * 0.006, Math.min(end, vibOn + 0.35));
+    lfo.connect(vib); oscs.forEach(o => vib.connect(o.frequency));
+    const trem = ctx.createGain(); trem.gain.setValueAtTime(0, t0); trem.gain.setValueAtTime(0, vibOn); trem.gain.linearRampToValueAtTime(0.06, Math.min(end, vibOn + 0.35));
+    const tremBus = ctx.createGain(); tremBus.gain.value = 1;
+    lfo.connect(trem); trem.connect(tremBus.gain);
+    body.disconnect(); body.connect(tremBus); tremBus.connect(voice);
+
+    // Breath: noise resonating at the note (the vessel), plus a little airy hiss
+    const breath = ctx.createBufferSource(); breath.buffer = noiseBuf; breath.loop = true;
+    const res = ctx.createBiquadFilter(); res.type = "bandpass"; res.frequency.value = freq; res.Q.value = 9;
+    const resG = ctx.createGain(); resG.gain.value = 0.55;
+    const hiss = ctx.createBiquadFilter(); hiss.type = "bandpass"; hiss.frequency.value = 3200; hiss.Q.value = 0.8;
+    const hissG = ctx.createGain(); hissG.gain.value = 0.035;
+    breath.connect(res); res.connect(resG); resG.connect(voice);
+    breath.connect(hiss); hiss.connect(hissG); hissG.connect(voice);
+
+    // Chiff: brief burst of air at the start of the note
+    const chiff = ctx.createBufferSource(); chiff.buffer = noiseBuf;
+    const cf = ctx.createBiquadFilter(); cf.type = "bandpass"; cf.frequency.value = freq * 4; cf.Q.value = 1.2;
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(0, t0); cg.gain.linearRampToValueAtTime(0.22, t0 + 0.008); cg.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.07);
+    chiff.connect(cf); cf.connect(cg); cg.connect(voice);
+
+    // Amplitude envelope: soft swell, slight settle, quick fade
+    const peak = 0.42 * Math.pow(440 / freq, 0.25);   // keep high notes from sounding shrill
+    voice.gain.setValueAtTime(0.0001, t0);
+    voice.gain.exponentialRampToValueAtTime(peak, t0 + atk);
+    voice.gain.setTargetAtTime(peak * 0.82, t0 + atk, 0.12);
+    voice.gain.setValueAtTime(peak * 0.82, Math.max(t0 + atk, end - rel));
+    voice.gain.exponentialRampToValueAtTime(0.0001, end);
+
+    const stopAt = end + 0.05, offset = Math.random() * 1.5;
+    [...oscs, lfo].forEach(o => { o.start(t0); o.stop(stopAt); });
+    breath.start(t0, offset); breath.stop(stopAt);
+    chiff.start(t0, offset); chiff.stop(t0 + 0.1);
   }
 
   /* ---------- Playback ---------- */
@@ -589,7 +648,7 @@
     let t = 0.08;
     seq.forEach((k, i) => {
       const dur = beats[i] * unit;
-      tone(NOTES[k].freq, Math.max(0.16, dur * 0.95), t);
+      tone(NOTES[k].freq, Math.max(0.2, dur * 0.97), t);
       playTimers.push(setTimeout(() => setHighlight(i, i - 1), t * 1000));
       t += dur;
     });

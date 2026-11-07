@@ -1,5 +1,5 @@
 // Offline cache for the Ocarina Songbook.
-const CACHE = "songbook-v1";
+const CACHE = "songbook-v2";
 const CORE = ["./", "./index.html", "./manifest.json", "./icon-180.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
