@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ocarina Songbook</title>
+<meta name="description" content="Every ocarina song with its button sequence, staff and playback — a companion for playing along on your controller.">
+<meta name="theme-color" content="#05060f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Songbook">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-512.png">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05060f;
+    --bg2: #0c1030;
+    --panel: rgba(10, 14, 40, 0.78);
+    --panel-solid: #0b0f2b;
+    --gold: #e8c766;
+    --gold-hi: #fff1b8;
+    --gold-dim: #8a7333;
+    --text: #f3ead2;
+    --muted: #a99e83;
+    --staff: #c0453b;
+    --a-btn: #2f6bff;
+    --a-btn-hi: #7aa2ff;
+    --c-btn: #f7c51e;
+    --c-btn-hi: #fff07a;
+    --accent: var(--gold);
+    --radius: 14px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 18px;
+    -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  /* Night sky backdrop */
+  .sky {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(ellipse 120% 60% at 50% 110%, rgba(232,199,102,0.10), transparent 60%),
+      radial-gradient(ellipse 90% 50% at 50% -10%, rgba(60,80,200,0.25), transparent 70%),
+      linear-gradient(180deg, var(--bg2) 0%, var(--bg) 70%);
+  }
+  .sky canvas { width: 100%; height: 100%; display: block; }
+
+  .app { max-width: 560px; margin: 0 auto; min-height: 100%; padding: calc(var(--safe-top) + 12px) 16px calc(var(--safe-bot) + 24px); }
+
+  h1, h2, h3, .cinzel { font-family: "Cinzel", "Times New Roman", serif; letter-spacing: 0.06em; }
+
+  /* Header */
+  header.top { text-align: center; padding: 18px 0 8px; }
+  header.top .crest { width: 54px; height: 54px; margin: 0 auto 6px; display: block; filter: drop-shadow(0 0 10px rgba(232,199,102,.45)); }
+  header.top h1 {
+    margin: 0; font-size: 28px; font-weight: 700;
+    background: linear-gradient(180deg, var(--gold-hi), var(--gold) 55%, var(--gold-dim));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 24px rgba(232,199,102,0.15);
+  }
+  header.top p { margin: 4px 0 0; color: var(--muted); font-style: italic; font-size: 17px; }
+
+  /* Ornamental divider */
+  .divider { display: flex; align-items: center; gap: 10px; margin: 22px 4px 12px; color: var(--gold); }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-dim), transparent); }
+  .divider span { font-family: "Cinzel", serif; font-size: 13px; letter-spacing: 0.25em; text-transform: uppercase; }
+
+  /* Controller toggle */
+  .seg { display: flex; margin: 14px auto 0; width: fit-content; border: 1px solid var(--gold-dim); border-radius: 999px; padding: 3px; background: rgba(0,0,0,.35); }
+  .seg button {
+    font: 600 12px "Cinzel", serif; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); background: none; border: 0; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { color: #1a1405; background: linear-gradient(180deg, var(--gold-hi), var(--gold)); }
+
+  /* Song cards */
+  .list { display: grid; gap: 10px; }
+  .card {
+    position: relative; display: flex; align-items: center; gap: 12px; width: 100%;
+    text-align: left; color: inherit; font: inherit; cursor: pointer;
+    padding: 12px 14px; border-radius: var(--radius);
+    background: var(--panel);
+    border: 1px solid rgba(232,199,102,.28);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.35);
+    transition: transform .12s ease, border-color .2s;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  .card:active { transform: scale(.985); border-color: var(--gold); }
+  .card .gem {
+    flex: none; width: 12px; height: 12px; transform: rotate(45deg); border-radius: 2px;
+    background: var(--song-color); box-shadow: 0 0 10px var(--song-color);
+  }
+  .card .body { flex: 1; min-width: 0; }
+  .card .name { font: 700 16px "Cinzel", serif; letter-spacing: .04em; color: var(--gold-hi); }
+  .card .mini { display: flex; gap: 3px; margin-top: 6px; flex-wrap: wrap; }
+  .card .chev { color: var(--gold-dim); font-size: 22px; flex: none; }
+
+  /* Note buttons (shared) */
+  .note {
+    --s: 22px;
+    width: var(--s); height: var(--s); border-radius: 50%;
+    display: inline-grid; place-items: center; flex: none;
+    font: 700 calc(var(--s) * .52) "Cinzel", sans-serif; color: #fff;
+    position: relative;
+  }
+  .note svg { width: 62%; height: 62%; display: block; }
+  .note.A { background: radial-gradient(circle at 35% 30%, var(--a-btn-hi), var(--a-btn) 60%, #163a9c); box-shadow: inset 0 -2px 0 rgba(0,0,0,.25); }
+  .note.C { background: radial-gradient(circle at 35% 30%, var(--c-btn-hi), var(--c-btn) 60%, #a77d00); box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); color: #3a2a00; }
+  .note.C svg path { fill: #3a2a00; }
+
+  /* Detail view */
+  .detail { display: none; }
+  body.show-detail .home { display: none; }
+  body.show-detail .detail { display: block; }
+
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+    background: rgba(0,0,0,.35); border: 1px solid var(--gold-dim); color: var(--gold);
+  }
+  .icon-btn svg { width: 22px; height: 22px; }
+
+  .title-block { text-align: center; margin: 10px 0 4px; }
+  .title-block .kind { font: 600 12px "Cinzel", serif; letter-spacing: .3em; text-transform: uppercase; color: var(--song-color, var(--gold)); }
+  .title-block h2 {
+    margin: 6px 0 4px; font-size: 30px; line-height: 1.15;
+    background: linear-gradient(180deg, var(--gold-hi), var(--gold) 60%, var(--gold-dim));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .title-block .desc { margin: 0 auto; max-width: 30em; color: var(--muted); font-style: italic; font-size: 18px; }
+
+  /* Staff panel — framed like an in-game dialog */
+  .frame {
+    position: relative; margin: 18px 0 0; padding: 16px 10px 14px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(8,10,30,.92), rgba(4,5,16,.92));
+    border: 2px solid var(--gold-dim);
+    box-shadow: inset 0 0 0 4px rgba(0,0,0,.6), inset 0 0 0 5px rgba(232,199,102,.25), 0 10px 30px rgba(0,0,0,.5), 0 0 40px -10px var(--song-color, transparent);
+  }
+  .frame::before, .frame::after {
+    content: "◆"; position: absolute; top: -11px; font-size: 14px; color: var(--gold);
+    line-height: 1; text-shadow: 0 0 8px rgba(232,199,102,.6);
+  }
+  .frame::before { left: 18px; } .frame::after { right: 18px; }
+  #staff { width: 100%; height: auto; display: block; overflow: visible; }
+  #staff .line { stroke: var(--staff); stroke-width: 1.4; opacity: .85; }
+  #staff .n { transition: transform .15s ease, filter .15s ease, opacity .2s; transform-box: fill-box; transform-origin: center; cursor: pointer; }
+  #staff .n.dim { opacity: .35; }
+  #staff .n.on { transform: scale(1.35); filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px var(--glow)); }
+  #staff .n.done { opacity: .55; }
+
+  /* Big sequence row */
+  .seq { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 18px 0 2px; }
+  .seq .step { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .seq .note { --s: 44px; transition: transform .15s, box-shadow .15s, opacity .2s; }
+  .seq.long { gap: 6px; }
+  .seq.long .note { --s: 36px; }
+  .seq .note.on { transform: scale(1.18); box-shadow: 0 0 0 3px #fff, 0 0 22px var(--glow); }
+  .seq .note.done { opacity: .45; }
+  .seq .lbl { font: 600 10px "Cinzel", serif; letter-spacing: .08em; color: var(--muted); }
+
+  .hint { text-align: center; color: var(--muted); font-size: 15px; margin: 12px 0 0; font-style: italic; }
+
+  /* Action buttons */
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; cursor: pointer;
+    font: 700 14px "Cinzel", serif; letter-spacing: .14em; text-transform: uppercase;
+    border-radius: 12px; border: 1px solid var(--gold-dim); color: var(--gold-hi); background: rgba(0,0,0,.4);
+  }
+  .btn svg { width: 18px; height: 18px; }
+  .btn.primary { color: #1a1405; border-color: transparent; background: linear-gradient(180deg, var(--gold-hi), var(--gold) 55%, #b8932f); box-shadow: 0 4px 18px rgba(232,199,102,.25); }
+  .btn:active { transform: translateY(1px); }
+  .btn.wide { grid-column: 1 / -1; }
+
+  /* Practice tap pad */
+  .pad {
+    display: none; margin-top: 14px; min-height: 120px; border-radius: 16px; cursor: pointer;
+    border: 1px dashed var(--gold-dim); background: rgba(232,199,102,.05);
+    place-items: center; text-align: center; padding: 16px;
+  }
+  .pad.active { display: grid; }
+  .pad .big { font: 700 15px "Cinzel", serif; letter-spacing: .2em; color: var(--gold); text-transform: uppercase; }
+  .pad .sub { font-style: italic; color: var(--muted); margin-top: 6px; }
+  .pad .nextnote { margin: 10px auto 0; }
+  .pad .nextnote .note { --s: 64px; }
+
+  /* Scarecrow editor */
+  .editor { display: none; margin-top: 16px; }
+  .editor.active { display: block; }
+  .keypad { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .keypad button { background: none; border: 0; padding: 0; cursor: pointer; }
+  .keypad .note { --s: 54px; }
+  .keypad button:active .note { transform: scale(.92); }
+  .edit-row { display: flex; justify-content: center; gap: 10px; margin-top: 12px; }
+  .edit-row .btn { min-height: 42px; padding: 0 16px; font-size: 12px; }
+
+  /* Install tip */
+  .tip {
+    margin: 22px 0 0; padding: 12px 14px; border-radius: 12px; font-size: 16px; color: var(--muted);
+    border: 1px solid rgba(232,199,102,.2); background: rgba(0,0,0,.3); display: none;
+  }
+  .tip.show { display: block; }
+  .tip b { color: var(--gold); font-weight: 600; }
+  .tip button { float: right; background: none; border: 0; color: var(--gold-dim); font-size: 20px; line-height: 1; cursor: pointer; }
+
+  .legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; color: var(--muted); font-size: 14px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .note { --s: 18px; }
+
+  footer { text-align: center; color: #5e5747; font-size: 13px; margin-top: 28px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="sky"><canvas id="stars"></canvas></div>
+
+<div class="app">
+  <!-- HOME -->
+  <section class="home" aria-label="Song list">
+    <header class="top">
+      <svg class="crest" viewBox="0 0 64 64" aria-hidden="true">
+        <defs>
+          <linearGradient id="og" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#9fd0ff"/><stop offset=".55" stop-color="#3d7bd9"/><stop offset="1" stop-color="#1b3f86"/>
+          </linearGradient>
+        </defs>
+        <path d="M10 34c0-11 12-18 26-18 9 0 16 4 18 10 1 3 4 4 6 5v4c-2 1-5 2-6 5-3 7-11 11-20 11C19 51 10 44 10 34z" fill="url(#og)" stroke="#e8c766" stroke-width="2"/>
+        <circle cx="26" cy="30" r="2.6" fill="#0b1a3d"/><circle cx="34" cy="28" r="2.6" fill="#0b1a3d"/><circle cx="42" cy="30" r="2.6" fill="#0b1a3d"/>
+        <circle cx="30" cy="40" r="2.2" fill="#0b1a3d"/><circle cx="39" cy="40" r="2.2" fill="#0b1a3d"/>
+        <path d="M16 30c3-6 9-9 16-10" stroke="#fff" stroke-opacity=".5" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <h1>Ocarina Songbook</h1>
+      <p>Every melody, ready at hand</p>
+      <div class="seg" role="group" aria-label="Controller labels">
+        <button data-mode="n64" aria-pressed="true">N64</button>
+        <button data-mode="switch" aria-pressed="false">Switch Online</button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </header>
+
+    <div class="divider"><span>Songs</span></div>
+    <div class="list" id="list-songs"></div>
+
+    <div class="divider"><span>Warp Songs</span></div>
+    <div class="list" id="list-warps"></div>
+
+    <div class="tip" id="tip">
+      <button aria-label="Dismiss" id="tip-x">×</button>
+      Install it: in Safari tap <b>Share</b> → <b>Add to Home Screen</b>. It works offline once added.
+    </div>
+    <footer>Fan-made companion. Not affiliated with any game publisher.</footer>
+  </section>
+
+  <!-- DETAIL -->
+  <section class="detail" aria-label="Song detail">
+    <div class="bar">
+      <button class="icon-btn" id="back" aria-label="Back to songs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="seg" role="group" aria-label="Controller labels" style="margin:0">
+        <button data-mode="n64" aria-pressed="true">N64</button>
+        <button data-mode="switch" aria-pressed="false">Switch</button>
+      </div>
+      <button class="icon-btn" id="wake" aria-label="Keep screen awake" title="Keep screen awake">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+
+    <div class="title-block">
+      <div class="kind" id="d-kind"></div>
+      <h2 id="d-name"></h2>
+      <p class="desc" id="d-desc"></p>
+    </div>
+
+    <div class="frame">
+      <svg id="staff" viewBox="0 0 320 100" role="img" aria-label="Note staff"></svg>
+    </div>
+
+    <div class="seq" id="seq"></div>
+    <p class="hint" id="d-hint"></p>
+
+    <div class="editor" id="editor">
+      <div class="keypad" id="keypad"></div>
+      <div class="edit-row">
+        <button class="btn" id="undo">Undo</button>
+        <button class="btn" id="clear">Clear</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="play">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg><span>Listen</span>
+      </button>
+      <button class="btn" id="practice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Step</span>
+      </button>
+    </div>
+
+    <div class="pad" id="pad" role="button" aria-label="Advance to next note">
+      <div>
+        <div class="big" id="pad-big">Tap after each note</div>
+        <div class="nextnote" id="pad-next"></div>
+        <div class="sub" id="pad-sub"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------- Notes ----------
+     The five ocarina notes. y = position on the staff (in SVG units), freq = pitch. */
+  const NOTES = {
+    A: { key: "A", btn: "A", type: "A", freq: 293.66, y: 80, n64: "A",       sw: "A" },
+    D: { key: "D", btn: "C", type: "C", freq: 349.23, y: 68, n64: "C-Down",  sw: "R-Stick ↓", dir: "down" },
+    R: { key: "R", btn: "C", type: "C", freq: 440.00, y: 56, n64: "C-Right", sw: "R-Stick →", dir: "right" },
+    L: { key: "L", btn: "C", type: "C", freq: 493.88, y: 50, n64: "C-Left",  sw: "R-Stick ←", dir: "left" },
+    U: { key: "U", btn: "C", type: "C", freq: 587.33, y: 38, n64: "C-Up",    sw: "R-Stick ↑", dir: "up" },
+  };
+  const ARROW = {
+    up:    "M12 3 L21 19 H3 Z",
+    down:  "M12 21 L3 5 H21 Z",
+    left:  "M3 12 L19 3 V21 Z",
+    right: "M21 12 L5 3 V21 Z",
+  };
+
+  /* ---------- Songs ----------
+     seq: notes in order. beats: relative length of each note for playback. */
+  const SONGS = [
+    { id: "zelda",    group: "songs", name: "Zelda's Lullaby",  color: "#c58cff", seq: "LURLUR",   beats: [2,1,3,2,1,3], tempo: 0.30,
+      desc: "The royal family's melody. Opens sealed doors and answers Triforce-marked stones." },
+    { id: "epona",    group: "songs", name: "Epona's Song",     color: "#e9a35b", seq: "ULRULR",   beats: [1,1,4,1,1,4], tempo: 0.24,
+      desc: "Calls your horse to your side — and keeps a certain ranch's cows happy." },
+    { id: "saria",    group: "songs", name: "Saria's Song",     color: "#5fd36a", seq: "DRLDRL",   beats: [1,1,2,1,1,2], tempo: 0.20,
+      desc: "A cheerful forest tune. Lets you talk with Saria from anywhere." },
+    { id: "sun",      group: "songs", name: "Sun's Song",       color: "#ffd84a", seq: "RDURDU",   beats: [1,1,2,1,1,3], tempo: 0.17,
+      desc: "Turns night into day and back again. Also stuns the undead." },
+    { id: "time",     group: "songs", name: "Song of Time",     color: "#6fc7ff", seq: "RADRAD",   beats: [2,4,2,2,4,2], tempo: 0.20,
+      desc: "Moves blocks marked with the Time symbol and opens the Door of Time." },
+    { id: "storms",   group: "songs", name: "Song of Storms",   color: "#8fa6c9", seq: "ADUADU",   beats: [1,1,4,1,1,4], tempo: 0.17,
+      desc: "Summons rain clouds, reveals hidden grottos and turns the windmill." },
+    { id: "scarecrow",group: "songs", name: "Scarecrow's Song", color: "#d1b07a", seq: "",         beats: null, tempo: 0.22, custom: true,
+      desc: "Your own eight-note tune. Compose it here, then teach it to the scarecrow." },
+
+    { id: "minuet",   group: "warps", name: "Minuet of Forest", color: "#3fcf5a", seq: "AULRLR",   beats: [1,3,1,1,1,3], tempo: 0.22,
+      desc: "Warps you to the Sacred Forest Meadow." },
+    { id: "bolero",   group: "warps", name: "Bolero of Fire",   color: "#ff5b3a", seq: "DADARDRD", beats: [1,1,1,1,1,1,1,3], tempo: 0.17,
+      desc: "Warps you to Death Mountain Crater." },
+    { id: "serenade", group: "warps", name: "Serenade of Water",color: "#3a8dff", seq: "ADRRL",    beats: [2,2,3,1,4], tempo: 0.24,
+      desc: "Warps you to the shore of Lake Hylia." },
+    { id: "nocturne", group: "warps", name: "Nocturne of Shadow",color:"#a66bff", seq: "LRRALRD",  beats: [2,1,2,2,2,1,3], tempo: 0.20,
+      desc: "Warps you to the graveyard in Kakariko Village." },
+    { id: "requiem",  group: "warps", name: "Requiem of Spirit",color: "#ff9a3c", seq: "ADARDA",   beats: [2,1,1,2,1,3], tempo: 0.24,
+      desc: "Warps you to the Desert Colossus." },
+    { id: "prelude",  group: "warps", name: "Prelude of Light", color: "#fff2a8", seq: "URURLU",   beats: [1,2,1,1,1,3], tempo: 0.22,
+      desc: "Warps you to the Temple of Time." },
+  ];
+
+  /* ---------- Storage (best-effort) ---------- */
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+  const scarecrow = SONGS.find(s => s.custom);
+  scarecrow.seq = store.get("scarecrow", "");
+
+  let mode = store.get("mode", "n64");
+
+  /* ---------- Rendering helpers ---------- */
+  const $ = s => document.querySelector(s);
+  const el = (tag, attrs = {}, html = "") => { const e = document.createElement(tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (html) e.innerHTML = html; return e; };
+
+  function noteHTML(k, extraClass = "") {
+    const n = NOTES[k];
+    if (n.type === "A") return `<span class="note A ${extraClass}" aria-label="${label(k)}">A</span>`;
+    return `<span class="note C ${extraClass}" aria-label="${label(k)}"><svg viewBox="0 0 24 24"><path d="${ARROW[n.dir]}"/></svg></span>`;
+  }
+  const label = k => mode === "switch" ? NOTES[k].sw : NOTES[k].n64;
+  const shortLabel = k => {
+    if (k === "A") return "A";
+    const d = NOTES[k].dir; const a = { up: "▲", down: "▼", left: "◀", right: "▶" }[d];
+    return mode === "switch" ? "R " + a : "C " + a;
+  };
+
+  function renderLegend() {
+    const lg = $("#legend");
+    lg.innerHTML = mode === "switch"
+      ? `<span>${noteHTML("A")} A button</span><span>${noteHTML("U")} Right stick</span>`
+      : `<span>${noteHTML("A")} A button</span><span>${noteHTML("U")} C-buttons</span>`;
+  }
+
+  function renderList() {
+    for (const g of ["songs", "warps"]) {
+      const host = $("#list-" + g); host.innerHTML = "";
+      for (const s of SONGS.filter(x => x.group === g)) {
+        const b = el("button", { class: "card", "data-id": s.id });
+        b.style.setProperty("--song-color", s.color);
+        const mini = s.seq ? [...s.seq].map(k => noteHTML(k)).join("") : `<span style="color:var(--muted);font-style:italic;font-size:15px">Tap to compose</span>`;
+        b.innerHTML = `<span class="gem"></span><span class="body"><div class="name">${s.name}</div><div class="mini">${mini}</div></span><span class="chev">›</span>`;
+        b.addEventListener("click", () => { location.hash = s.id; });
+        host.appendChild(b);
+      }
+    }
+  }
+
+  /* ---------- Staff SVG ---------- */
+  const SVGNS = "http://www.w3.org/2000/svg";
+  function renderStaff(song) {
+    const svg = $("#staff");
+    const seq = [...song.seq];
+    const slots = song.custom ? 8 : seq.length;
+    const left = 38, right = 14, gap = 34;
+    const width = Math.max(300, left + right + gap * slots);
+    svg.setAttribute("viewBox", `0 0 ${width} 100`);
+    svg.innerHTML = "";
+    // Five staff lines (top F5 → bottom E4)
+    for (let i = 0; i < 5; i++) {
+      const y = 26 + i * 12;
+      const l = document.createElementNS(SVGNS, "line");
+      l.setAttribute("x1", 6); l.setAttribute("x2", width - 6); l.setAttribute("y1", y); l.setAttribute("y2", y);
+      l.setAttribute("class", "line"); svg.appendChild(l);
+    }
+    // Clef-like ornament
+    const clef = document.createElementNS(SVGNS, "text");
+    clef.setAttribute("x", 10); clef.setAttribute("y", 66); clef.setAttribute("font-size", "46");
+    clef.setAttribute("fill", "#c0453b"); clef.setAttribute("font-family", "serif"); clef.textContent = "𝄞";
+    svg.appendChild(clef);
+    // Empty slot markers for custom song
+    if (song.custom) {
+      for (let i = seq.length; i < slots; i++) {
+        const c = document.createElementNS(SVGNS, "circle");
+        c.setAttribute("cx", left + gap * i + gap / 2); c.setAttribute("cy", 50); c.setAttribute("r", 4);
+        c.setAttribute("fill", "rgba(232,199,102,.25)"); svg.appendChild(c);
+      }
+    }
+    seq.forEach((k, i) => {
+      const n = NOTES[k];
+      const g = document.createElementNS(SVGNS, "g");
+      g.setAttribute("class", "n"); g.dataset.i = i;
+      g.style.setProperty("--glow", n.type === "A" ? "#5b8cff" : "#ffd84a");
+      const cx = left + gap * i + gap / 2, cy = n.y, r = 11;
+      const c = document.createElementNS(SVGNS, "circle");
+      c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", r);
+      c.setAttribute("fill", n.type === "A" ? "url(#gA)" : "url(#gC)");
+      c.setAttribute("stroke", "rgba(0,0,0,.45)"); c.setAttribute("stroke-width", "1");
+      g.appendChild(c);
+      if (n.type === "A") {
+        const t = document.createElementNS(SVGNS, "text");
+        t.setAttribute("x", cx); t.setAttribute("y", cy + 4.5); t.setAttribute("text-anchor", "middle");
+        t.setAttribute("font-size", "13"); t.setAttribute("font-weight", "700"); t.setAttribute("fill", "#fff");
+        t.setAttribute("font-family", "Cinzel, serif"); t.textContent = "A"; g.appendChild(t);
+      } else {
+        const p = document.createElementNS(SVGNS, "path");
+        p.setAttribute("d", ARROW[n.dir]); p.setAttribute("fill", "#3a2a00");
+        p.setAttribute("transform", `translate(${cx - 7} ${cy - 7}) scale(${14 / 24})`);
+        g.appendChild(p);
+      }
+      g.addEventListener("click", () => { ensureAudio(); tone(n.freq, 0.45); flash(i); });
+      svg.appendChild(g);
+    });
+    // gradients
+    const defs = document.createElementNS(SVGNS, "defs");
+    defs.innerHTML = `
+      <radialGradient id="gA" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#7aa2ff"/><stop offset=".6" stop-color="#2f6bff"/><stop offset="1" stop-color="#163a9c"/></radialGradient>
+      <radialGradient id="gC" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff07a"/><stop offset=".6" stop-color="#f7c51e"/><stop offset="1" stop-color="#a77d00"/></radialGradient>`;
+    svg.prepend(defs);
+  }
+
+  function renderSeq(song) {
+    const host = $("#seq"); host.innerHTML = "";
+    host.classList.toggle("long", song.seq.length > 6);
+    [...song.seq].forEach((k, i) => {
+      const s = el("div", { class: "step" });
+      s.innerHTML = noteHTML(k) + `<span class="lbl">${shortLabel(k)}</span>`;
+      s.querySelector(".note").style.setProperty("--glow", NOTES[k].type === "A" ? "#5b8cff" : "#ffd84a");
+      s.dataset.i = i;
+      s.addEventListener("click", () => { ensureAudio(); tone(NOTES[k].freq, 0.45); flash(i); });
+      host.appendChild(s);
+    });
+    const hint = $("#d-hint");
+    if (song.custom) hint.textContent = song.seq.length ? `${song.seq.length} of 8 notes` : "Tap the buttons below to compose 8 notes.";
+    else hint.textContent = [...song.seq].map(k => label(k)).join("  ·  ");
+  }
+
+  /* highlight state: index -> 'on' ; < index -> 'done' */
+  function setHighlight(idx, doneUpTo = -1) {
+    document.querySelectorAll("#staff .n").forEach(g => {
+      const i = +g.dataset.i;
+      g.classList.toggle("on", i === idx);
+      g.classList.toggle("done", i <= doneUpTo && i !== idx);
+    });
+    document.querySelectorAll("#seq .step").forEach(s => {
+      const i = +s.dataset.i, n = s.querySelector(".note");
+      n.classList.toggle("on", i === idx);
+      n.classList.toggle("done", i <= doneUpTo && i !== idx);
+    });
+  }
+  let flashTimer;
+  function flash(i) { clearTimeout(flashTimer); setHighlight(i); flashTimer = setTimeout(() => { if (!playing && practiceIdx < 0) setHighlight(-1); }, 380); }
+
+  /* ---------- Audio (synthesised ocarina-like tone) ---------- */
+  let ctx, master;
+  function ensureAudio() {
+    if (!ctx) {
+      try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch {}
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ctx = new AC();
+      master = ctx.createGain(); master.gain.value = 0.55;
+      // gentle room reverb via feedback delay
+      const delay = ctx.createDelay(); delay.delayTime.value = 0.19;
+      const fb = ctx.createGain(); fb.gain.value = 0.28;
+      const wet = ctx.createGain(); wet.gain.value = 0.25;
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2400;
+      master.connect(ctx.destination);
+      master.connect(delay); delay.connect(lp); lp.connect(fb); fb.connect(delay); lp.connect(wet); wet.connect(ctx.destination);
+    }
+    if (ctx.state === "suspended") ctx.resume();
+  }
+  function tone(freq, dur, when = 0) {
+    if (!ctx) return;
+    const t0 = ctx.currentTime + when;
+    const out = ctx.createGain(); out.gain.value = 0;
+    const filt = ctx.createBiquadFilter(); filt.type = "lowpass"; filt.frequency.value = freq * 4; filt.Q.value = 0.7;
+    const o1 = ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = freq;
+    const o2 = ctx.createOscillator(); o2.type = "triangle"; o2.frequency.value = freq * 2;
+    const g2 = ctx.createGain(); g2.gain.value = 0.08;
+    // vibrato that eases in
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 5.2;
+    const lfoG = ctx.createGain(); lfoG.gain.setValueAtTime(0, t0); lfoG.gain.linearRampToValueAtTime(freq * 0.008, t0 + Math.min(0.35, dur));
+    lfo.connect(lfoG); lfoG.connect(o1.frequency); lfoG.connect(o2.frequency);
+    // breath noise
+    const nb = ctx.createBuffer(1, Math.max(1, ctx.sampleRate * 0.25 | 0), ctx.sampleRate);
+    const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1);
+    const noise = ctx.createBufferSource(); noise.buffer = nb;
+    const nf = ctx.createBiquadFilter(); nf.type = "bandpass"; nf.frequency.value = freq * 2; nf.Q.value = 1.5;
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(0.06, t0); ng.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
+    noise.connect(nf); nf.connect(ng); ng.connect(out);
+
+    o1.connect(filt); o2.connect(g2); g2.connect(filt); filt.connect(out); out.connect(master);
+    const a = 0.035, rel = 0.12, end = t0 + dur;
+    out.gain.setValueAtTime(0, t0);
+    out.gain.linearRampToValueAtTime(0.9, t0 + a);
+    out.gain.setTargetAtTime(0.7, t0 + a, 0.08);
+    out.gain.setValueAtTime(0.7, Math.max(t0 + a, end - rel));
+    out.gain.linearRampToValueAtTime(0, end);
+    [o1, o2, lfo].forEach(o => { o.start(t0); o.stop(end + 0.05); });
+    noise.start(t0); noise.stop(t0 + 0.25);
+  }
+
+  /* ---------- Playback ---------- */
+  let playing = false, playTimers = [];
+  function stopPlayback() {
+    playTimers.forEach(clearTimeout); playTimers = []; playing = false;
+    setPlayBtn(false); if (practiceIdx < 0) setHighlight(-1);
+  }
+  function setPlayBtn(on) {
+    $("#play").innerHTML = on
+      ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg><span>Stop</span>`
+      : `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg><span>Listen</span>`;
+  }
+  function play(song) {
+    if (playing) return stopPlayback();
+    if (!song.seq) return;
+    exitPractice();
+    ensureAudio(); if (!ctx) return;
+    playing = true; setPlayBtn(true);
+    const seq = [...song.seq];
+    const beats = song.beats && song.beats.length === seq.length ? song.beats : seq.map(() => 1.5);
+    const unit = song.tempo || 0.22;
+    let t = 0.08;
+    seq.forEach((k, i) => {
+      const dur = beats[i] * unit;
+      tone(NOTES[k].freq, Math.max(0.16, dur * 0.95), t);
+      playTimers.push(setTimeout(() => setHighlight(i, i - 1), t * 1000));
+      t += dur;
+    });
+    playTimers.push(setTimeout(() => { setHighlight(-1, seq.length); }, t * 1000));
+    playTimers.push(setTimeout(stopPlayback, t * 1000 + 700));
+  }
+
+  /* ---------- Practice / step mode ---------- */
+  let practiceIdx = -1;
+  function startPractice(song) {
+    if (!song.seq) return;
+    stopPlayback();
+    practiceIdx = 0;
+    $("#pad").classList.add("active");
+    $("#practice span").textContent = "Restart";
+    updatePractice(song);
+  }
+  function exitPractice() {
+    practiceIdx = -1;
+    $("#pad").classList.remove("active");
+    $("#practice span").textContent = "Step";
+    setHighlight(-1);
+  }
+  function updatePractice(song) {
+    const seq = [...song.seq];
+    if (practiceIdx >= seq.length) {
+      setHighlight(-1, seq.length);
+      $("#pad-big").textContent = "Song complete";
+      $("#pad-next").innerHTML = `<span style="font-size:40px;color:var(--gold)">♪</span>`;
+      $("#pad-sub").textContent = "Tap to play it again";
+      return;
+    }
+    const k = seq[practiceIdx];
+    setHighlight(practiceIdx, practiceIdx - 1);
+    $("#pad-big").textContent = `Note ${practiceIdx + 1} of ${seq.length}`;
+    $("#pad-next").innerHTML = noteHTML(k);
+    $("#pad-sub").textContent = `Press ${label(k)}, then tap here`;
+  }
+  function advancePractice(song) {
+    const seq = [...song.seq];
+    if (practiceIdx >= seq.length) { practiceIdx = 0; updatePractice(song); return; }
+    ensureAudio(); tone(NOTES[seq[practiceIdx]].freq, 0.32);
+    practiceIdx++; updatePractice(song);
+  }
+
+  /* ---------- Scarecrow editor ---------- */
+  function renderKeypad() {
+    const kp = $("#keypad"); kp.innerHTML = "";
+    ["A", "D", "R", "L", "U"].forEach(k => {
+      const b = el("button", { "aria-label": "Add " + label(k) }, noteHTML(k));
+      b.addEventListener("click", () => {
+        ensureAudio(); tone(NOTES[k].freq, 0.4);
+        if (scarecrow.seq.length >= 8) return;
+        scarecrow.seq += k; store.set("scarecrow", scarecrow.seq); refreshDetail();
+      });
+      kp.appendChild(b);
+    });
+  }
+
+  /* ---------- Views ---------- */
+  let current = null;
+  function openSong(id) {
+    const song = SONGS.find(s => s.id === id);
+    if (!song) { closeSong(); return; }
+    current = song;
+    stopPlayback(); exitPractice();
+    document.body.classList.add("show-detail");
+    document.documentElement.style.setProperty("--song-color", song.color);
+    $(".detail").style.setProperty("--song-color", song.color);
+    $("#d-kind").textContent = song.group === "warps" ? "Warp Song" : "Song";
+    $("#d-name").textContent = song.name;
+    $("#d-desc").textContent = song.desc;
+    $("#editor").classList.toggle("active", !!song.custom);
+    refreshDetail();
+    window.scrollTo(0, 0);
+  }
+  function refreshDetail() {
+    if (!current) return;
+    renderStaff(current); renderSeq(current);
+    if (current.custom) renderKeypad();
+    if (practiceIdx >= 0) updatePractice(current);
+  }
+  function closeSong() {
+    stopPlayback(); exitPractice(); current = null;
+    document.body.classList.remove("show-detail");
+    renderList();
+  }
+  function route() { const id = location.hash.slice(1); id ? openSong(id) : closeSong(); }
+
+  function setMode(m) {
+    mode = m; store.set("mode", m);
+    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+    renderLegend(); renderList(); refreshDetail();
+  }
+
+  /* ---------- Wake lock ---------- */
+  let wakeLock = null, wantWake = false;
+  function paintWake() { const b = $("#wake"); b.style.color = wantWake ? "#1a1405" : ""; b.style.background = wantWake ? "var(--gold)" : ""; }
+  async function acquireWake() {
+    try {
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => { wakeLock = null; });
+    } catch { wakeLock = null; wantWake = false; paintWake(); }
+  }
+  async function toggleWake() {
+    if (!("wakeLock" in navigator)) { alert("Keeping the screen awake isn't supported here. Try Settings → Display & Brightness → Auto-Lock."); return; }
+    wantWake = !wantWake; paintWake();
+    if (wantWake) await acquireWake();
+    else if (wakeLock) { try { await wakeLock.release(); } catch {} wakeLock = null; }
+  }
+
+  /* ---------- Wire up ---------- */
+  document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  $("#back").addEventListener("click", () => { if (history.length > 1 && location.hash) history.back(); else location.hash = ""; });
+  $("#play").addEventListener("click", () => current && play(current));
+  $("#practice").addEventListener("click", () => current && startPractice(current));
+  $("#pad").addEventListener("click", () => current && advancePractice(current));
+  $("#undo").addEventListener("click", () => { scarecrow.seq = scarecrow.seq.slice(0, -1); store.set("scarecrow", scarecrow.seq); refreshDetail(); });
+  $("#clear").addEventListener("click", () => { scarecrow.seq = ""; store.set("scarecrow", ""); exitPractice(); refreshDetail(); });
+  $("#wake").addEventListener("click", toggleWake);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && wantWake && !wakeLock) acquireWake(); });
+  window.addEventListener("hashchange", route);
+
+  // Install tip: show on iOS Safari when not already installed
+  const standalone = window.navigator.standalone || matchMedia("(display-mode: standalone)").matches;
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (isIOS && !standalone && !store.get("tipDismissed", false)) $("#tip").classList.add("show");
+  $("#tip-x").addEventListener("click", () => { $("#tip").classList.remove("show"); store.set("tipDismissed", true); });
+
+  setMode(mode);
+  route();
+
+  /* ---------- Starfield ---------- */
+  const cv = $("#stars"), cx2 = cv.getContext("2d");
+  let stars = [];
+  function sizeStars() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+    cx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    stars = Array.from({ length: Math.round(innerWidth * innerHeight / 5000) }, () => ({
+      x: Math.random() * innerWidth, y: Math.random() * innerHeight * 0.85,
+      r: Math.random() * 1.2 + 0.2, p: Math.random() * Math.PI * 2, s: 0.4 + Math.random() * 1.2,
+    }));
+  }
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function drawStars(t) {
+    cx2.clearRect(0, 0, innerWidth, innerHeight);
+    for (const s of stars) {
+      const a = reduce ? 0.6 : 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(s.p + t / 1000 * s.s));
+      cx2.globalAlpha = a; cx2.fillStyle = "#fff6d8";
+      cx2.beginPath(); cx2.arc(s.x, s.y, s.r, 0, Math.PI * 2); cx2.fill();
+    }
+    if (!reduce) requestAnimationFrame(drawStars);
+  }
+  sizeStars(); addEventListener("resize", sizeStars); requestAnimationFrame(drawStars);
+
+  // Offline support
+  if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+})();
+</script>
+</body>
+</html>

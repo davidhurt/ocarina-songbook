@@ -1,0 +1,15 @@
+{
+  "name": "Ocarina Songbook",
+  "short_name": "Songbook",
+  "description": "Every ocarina song with its button sequence, for playing along on your controller.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05060f",
+  "theme_color": "#05060f",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
