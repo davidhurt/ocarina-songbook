@@ -117,10 +117,19 @@
     font: 700 calc(var(--s) * .52) "Cinzel", sans-serif; color: #fff;
     position: relative;
   }
-  .note svg { width: 62%; height: 62%; display: block; }
-  .note.A { background: radial-gradient(circle at 35% 30%, var(--a-btn-hi), var(--a-btn) 60%, #163a9c); box-shadow: inset 0 -2px 0 rgba(0,0,0,.25); }
-  .note.C { background: radial-gradient(circle at 35% 30%, var(--c-btn-hi), var(--c-btn) 60%, #a77d00); box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); color: #3a2a00; }
-  .note.C svg path { fill: #3a2a00; }
+  /* Switch face buttons (A, X, Y): round, dark, light rim */
+  .note.face {
+    background: radial-gradient(circle at 35% 28%, #5a6070, #262a33 55%, #121419);
+    box-shadow: inset 0 0 0 1.5px rgba(235,238,245,.75), inset 0 -2px 0 rgba(0,0,0,.4), 0 0 10px -2px var(--glow, transparent);
+    color: #fff; font-family: "Helvetica Neue", Arial, sans-serif; font-weight: 700;
+  }
+  /* Shoulder buttons (L, R): wide rounded bumpers */
+  .note.shoulder {
+    width: calc(var(--s) * 1.25); border-radius: calc(var(--s) * .5) calc(var(--s) * .5) calc(var(--s) * .22) calc(var(--s) * .22);
+    background: linear-gradient(180deg, #6a7080, #2b2f39 55%, #16181e);
+    box-shadow: inset 0 0 0 1.5px rgba(235,238,245,.75), inset 0 -2px 0 rgba(0,0,0,.4), 0 0 10px -2px var(--glow, transparent);
+    color: #fff; font-family: "Helvetica Neue", Arial, sans-serif; font-weight: 700;
+  }
 
   /* Detail view */
   .detail { display: none; }
@@ -128,6 +137,7 @@
   body.show-detail .detail { display: block; }
 
   .bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
+  .bar .bar-title { font: 600 12px "Cinzel", serif; letter-spacing: .25em; text-transform: uppercase; color: var(--gold-dim); }
   .icon-btn {
     width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
     background: rgba(0,0,0,.35); border: 1px solid var(--gold-dim); color: var(--gold);
@@ -164,14 +174,12 @@
   #staff .n.done { opacity: .55; }
 
   /* Big sequence row */
-  .seq { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 18px 0 2px; }
+  .seq { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 18px 0 2px; }
   .seq .step { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .seq .note { --s: 44px; transition: transform .15s, box-shadow .15s, opacity .2s; }
-  .seq.long { gap: 6px; }
-  .seq.long .note { --s: 36px; }
-  .seq .note.on { transform: scale(1.18); box-shadow: 0 0 0 3px #fff, 0 0 22px var(--glow); }
+  .seq .note { --s: var(--fit, 44px); transition: transform .15s, box-shadow .15s, opacity .2s; }
+  .seq .note.on { transform: scale(1.18); box-shadow: inset 0 0 0 1.5px #fff, 0 0 0 3px var(--gold-hi), 0 0 22px var(--gold); }
   .seq .note.done { opacity: .45; }
-  .seq .lbl { font: 600 10px "Cinzel", serif; letter-spacing: .08em; color: var(--muted); }
+  .seq .lbl { font: 600 10px "Cinzel", serif; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
 
   .hint { text-align: center; color: var(--muted); font-size: 15px; margin: 12px 0 0; font-style: italic; }
 
@@ -218,9 +226,10 @@
   .tip b { color: var(--gold); font-weight: 600; }
   .tip button { float: right; background: none; border: 0; color: var(--gold-dim); font-size: 20px; line-height: 1; cursor: pointer; }
 
-  .legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; color: var(--muted); font-size: 14px; }
+  .legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin-top: 14px; color: var(--muted); font-size: 15px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .legend .note { --s: 18px; }
+  .legend .note { --s: 20px; }
+  .legend .grp { display: inline-flex; gap: 3px; }
 
   footer { text-align: center; color: #5e5747; font-size: 13px; margin-top: 28px; }
 
@@ -247,10 +256,6 @@
       </svg>
       <h1>Ocarina Songbook</h1>
       <p>Every melody, ready at hand</p>
-      <div class="seg" role="group" aria-label="Controller labels">
-        <button data-mode="n64" aria-pressed="true">N64</button>
-        <button data-mode="switch" aria-pressed="false">Switch Online</button>
-      </div>
       <div class="legend" id="legend"></div>
     </header>
 
@@ -273,10 +278,7 @@
       <button class="icon-btn" id="back" aria-label="Back to songs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
-      <div class="seg" role="group" aria-label="Controller labels" style="margin:0">
-        <button data-mode="n64" aria-pressed="true">N64</button>
-        <button data-mode="switch" aria-pressed="false">Switch</button>
-      </div>
+      <div class="bar-title">Songbook</div>
       <button class="icon-btn" id="wake" aria-label="Keep screen awake" title="Keep screen awake">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       </button>
@@ -329,21 +331,18 @@
   /* ---------- Notes ----------
      The five ocarina notes. y = position on the staff (in SVG units), freq = pitch. */
   const NOTES = {
-    A: { key: "A", btn: "A", type: "A", freq: 293.66, y: 80, n64: "A",       sw: "A" },
-    D: { key: "D", btn: "C", type: "C", freq: 349.23, y: 68, n64: "C-Down",  sw: "R-Stick ↓", dir: "down" },
-    R: { key: "R", btn: "C", type: "C", freq: 440.00, y: 56, n64: "C-Right", sw: "R-Stick →", dir: "right" },
-    L: { key: "L", btn: "C", type: "C", freq: 493.88, y: 50, n64: "C-Left",  sw: "R-Stick ←", dir: "left" },
-    U: { key: "U", btn: "C", type: "C", freq: 587.33, y: 38, n64: "C-Up",    sw: "R-Stick ↑", dir: "up" },
+    A: { btn: "L", shape: "shoulder", freq: 293.66, y: 80, name: "L button" },
+    D: { btn: "R", shape: "shoulder", freq: 349.23, y: 68, name: "R button" },
+    R: { btn: "A", shape: "face",     freq: 440.00, y: 56, name: "A button" },
+    L: { btn: "Y", shape: "face",     freq: 493.88, y: 50, name: "Y button" },
+    U: { btn: "X", shape: "face",     freq: 587.33, y: 38, name: "X button" },
   };
-  const ARROW = {
-    up:    "M12 3 L21 19 H3 Z",
-    down:  "M12 21 L3 5 H21 Z",
-    left:  "M3 12 L19 3 V21 Z",
-    right: "M21 12 L5 3 V21 Z",
-  };
+  const NOTE_ORDER = ["A", "D", "R", "L", "U"];   // low to high: L R A Y X
+  const GLOW = "#e8c766";
 
   /* ---------- Songs ----------
-     seq: notes in order. beats: relative length of each note for playback. */
+     seq: notes in order by pitch key (A=L, D=R, R=A, L=Y, U=X on Switch).
+     beats: relative length of each note for playback. */
   const SONGS = [
     { id: "zelda",    group: "songs", name: "Zelda's Lullaby",  color: "#c58cff", seq: "LURLUR",   beats: [2,1,3,2,1,3], tempo: 0.30,
       desc: "The royal family's melody. Opens sealed doors and answers Triforce-marked stones." },
@@ -382,29 +381,20 @@
   const scarecrow = SONGS.find(s => s.custom);
   scarecrow.seq = store.get("scarecrow", "");
 
-  let mode = store.get("mode", "n64");
-
   /* ---------- Rendering helpers ---------- */
   const $ = s => document.querySelector(s);
   const el = (tag, attrs = {}, html = "") => { const e = document.createElement(tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (html) e.innerHTML = html; return e; };
 
   function noteHTML(k, extraClass = "") {
     const n = NOTES[k];
-    if (n.type === "A") return `<span class="note A ${extraClass}" aria-label="${label(k)}">A</span>`;
-    return `<span class="note C ${extraClass}" aria-label="${label(k)}"><svg viewBox="0 0 24 24"><path d="${ARROW[n.dir]}"/></svg></span>`;
+    return `<span class="note ${n.shape} ${extraClass}" aria-label="${n.name}">${n.btn}</span>`;
   }
-  const label = k => mode === "switch" ? NOTES[k].sw : NOTES[k].n64;
-  const shortLabel = k => {
-    if (k === "A") return "A";
-    const d = NOTES[k].dir; const a = { up: "▲", down: "▼", left: "◀", right: "▶" }[d];
-    return mode === "switch" ? "R " + a : "C " + a;
-  };
+  const label = k => NOTES[k].btn;
 
   function renderLegend() {
-    const lg = $("#legend");
-    lg.innerHTML = mode === "switch"
-      ? `<span>${noteHTML("A")} A button</span><span>${noteHTML("U")} Right stick</span>`
-      : `<span>${noteHTML("A")} A button</span><span>${noteHTML("U")} C-buttons</span>`;
+    $("#legend").innerHTML =
+      `<span><span class="grp">${noteHTML("A")}${noteHTML("D")}</span> Shoulder buttons</span>` +
+      `<span><span class="grp">${noteHTML("R")}${noteHTML("L")}${noteHTML("U")}</span> Face buttons</span>`;
   }
 
   function renderList() {
@@ -455,42 +445,42 @@
       const n = NOTES[k];
       const g = document.createElementNS(SVGNS, "g");
       g.setAttribute("class", "n"); g.dataset.i = i;
-      g.style.setProperty("--glow", n.type === "A" ? "#5b8cff" : "#ffd84a");
-      const cx = left + gap * i + gap / 2, cy = n.y, r = 11;
-      const c = document.createElementNS(SVGNS, "circle");
-      c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", r);
-      c.setAttribute("fill", n.type === "A" ? "url(#gA)" : "url(#gC)");
-      c.setAttribute("stroke", "rgba(0,0,0,.45)"); c.setAttribute("stroke-width", "1");
-      g.appendChild(c);
-      if (n.type === "A") {
-        const t = document.createElementNS(SVGNS, "text");
-        t.setAttribute("x", cx); t.setAttribute("y", cy + 4.5); t.setAttribute("text-anchor", "middle");
-        t.setAttribute("font-size", "13"); t.setAttribute("font-weight", "700"); t.setAttribute("fill", "#fff");
-        t.setAttribute("font-family", "Cinzel, serif"); t.textContent = "A"; g.appendChild(t);
-      } else {
-        const p = document.createElementNS(SVGNS, "path");
-        p.setAttribute("d", ARROW[n.dir]); p.setAttribute("fill", "#3a2a00");
-        p.setAttribute("transform", `translate(${cx - 7} ${cy - 7}) scale(${14 / 24})`);
-        g.appendChild(p);
-      }
+      g.style.setProperty("--glow", GLOW);
+      const cx = left + gap * i + gap / 2, cy = n.y;
+      const shoulder = n.shape === "shoulder";
+      const w = shoulder ? 30 : 22, h = 22;
+      const body = document.createElementNS(SVGNS, "rect");
+      body.setAttribute("x", cx - w / 2); body.setAttribute("y", cy - h / 2);
+      body.setAttribute("width", w); body.setAttribute("height", h);
+      body.setAttribute("rx", shoulder ? 9 : 11);
+      body.setAttribute("fill", shoulder ? "url(#gSh)" : "url(#gFace)");
+      body.setAttribute("stroke", "rgba(235,238,245,.8)"); body.setAttribute("stroke-width", "1.3");
+      g.appendChild(body);
+      const t = document.createElementNS(SVGNS, "text");
+      t.setAttribute("x", cx); t.setAttribute("y", cy + 4.6); t.setAttribute("text-anchor", "middle");
+      t.setAttribute("font-size", "13"); t.setAttribute("font-weight", "700"); t.setAttribute("fill", "#fff");
+      t.setAttribute("font-family", "Helvetica Neue, Arial, sans-serif"); t.textContent = n.btn;
+      g.appendChild(t);
       g.addEventListener("click", () => { ensureAudio(); tone(n.freq, 0.45); flash(i); });
       svg.appendChild(g);
     });
     // gradients
     const defs = document.createElementNS(SVGNS, "defs");
     defs.innerHTML = `
-      <radialGradient id="gA" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#7aa2ff"/><stop offset=".6" stop-color="#2f6bff"/><stop offset="1" stop-color="#163a9c"/></radialGradient>
-      <radialGradient id="gC" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff07a"/><stop offset=".6" stop-color="#f7c51e"/><stop offset="1" stop-color="#a77d00"/></radialGradient>`;
+      <radialGradient id="gFace" cx=".35" cy=".28" r=".85"><stop offset="0" stop-color="#5a6070"/><stop offset=".55" stop-color="#262a33"/><stop offset="1" stop-color="#121419"/></radialGradient>
+      <linearGradient id="gSh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6a7080"/><stop offset=".55" stop-color="#2b2f39"/><stop offset="1" stop-color="#16181e"/></linearGradient>`;
     svg.prepend(defs);
   }
 
   function renderSeq(song) {
     const host = $("#seq"); host.innerHTML = "";
-    host.classList.toggle("long", song.seq.length > 6);
+    // Size the buttons so the whole song fits on one row on any phone width
+    const units = [...song.seq].reduce((u, k) => u + (NOTES[k].shape === "shoulder" ? 1.25 : 1), 0);
+    const gapPx = 6, avail = (host.clientWidth || Math.min(innerWidth, 560) - 32) - gapPx * Math.max(0, song.seq.length - 1);
+    host.style.setProperty("--fit", units ? Math.max(22, Math.min(48, Math.floor(avail / units))) + "px" : "48px");
     [...song.seq].forEach((k, i) => {
       const s = el("div", { class: "step" });
-      s.innerHTML = noteHTML(k) + `<span class="lbl">${shortLabel(k)}</span>`;
-      s.querySelector(".note").style.setProperty("--glow", NOTES[k].type === "A" ? "#5b8cff" : "#ffd84a");
+      s.innerHTML = noteHTML(k);
       s.dataset.i = i;
       s.addEventListener("click", () => { ensureAudio(); tone(NOTES[k].freq, 0.45); flash(i); });
       host.appendChild(s);
@@ -498,6 +488,7 @@
     const hint = $("#d-hint");
     if (song.custom) hint.textContent = song.seq.length ? `${song.seq.length} of 8 notes` : "Tap the buttons below to compose 8 notes.";
     else hint.textContent = [...song.seq].map(k => label(k)).join("  ·  ");
+    hint.style.fontStyle = "normal"; hint.style.letterSpacing = song.custom ? "" : ".08em";
   }
 
   /* highlight state: index -> 'on' ; < index -> 'done' */
@@ -553,13 +544,16 @@
       ctx = new AC();
       noiseBuf = makeNoise(2);
       master = ctx.createGain(); master.gain.value = 0.7;
+      // warmth: lift the low body, soften the top
+      const warm = ctx.createBiquadFilter(); warm.type = "lowshelf"; warm.frequency.value = 320; warm.gain.value = 5;
+      const soft = ctx.createBiquadFilter(); soft.type = "highshelf"; soft.frequency.value = 3500; soft.gain.value = -4;
       const comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -14; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.2;
-      const verb = ctx.createConvolver(); verb.buffer = makeImpulse(2.4, 3);
-      const wet = ctx.createGain(); wet.gain.value = 0.32;
-      const pre = ctx.createDelay(); pre.delayTime.value = 0.025;
-      master.connect(comp);
-      master.connect(pre); pre.connect(verb); verb.connect(wet); wet.connect(comp);
+      const verb = ctx.createConvolver(); verb.buffer = makeImpulse(3.4, 2.6);
+      const wet = ctx.createGain(); wet.gain.value = 0.42;
+      const pre = ctx.createDelay(); pre.delayTime.value = 0.035;
+      master.connect(warm); warm.connect(soft); soft.connect(comp);
+      soft.connect(pre); pre.connect(verb); verb.connect(wet); wet.connect(comp);
       comp.connect(ctx.destination);
     }
     if (ctx.state === "suspended") ctx.resume();
@@ -573,15 +567,18 @@
     // Body: fundamental + faint 2nd/3rd partials, through a soft lowpass
     const body = ctx.createBiquadFilter(); body.type = "lowpass"; body.frequency.value = freq * 3.2; body.Q.value = 0.5;
     body.connect(voice);
-    const partials = [[1, 1], [2, 0.045], [3, 0.03]];
-    const oscs = partials.map(([m, g]) => {
-      const o = ctx.createOscillator(); o.type = "sine";
+    // [multiple, gain, detune in cents, pan]
+    const partials = [[1, 1, 0, -0.15], [1, 0.38, 6, 0.25], [0.5, 0.11, 0, 0], [2, 0.05, 0, 0], [3, 0.028, 0, 0]];
+    const oscs = partials.map(([m, g, cents, pan]) => {
+      const o = ctx.createOscillator(); o.type = "sine"; o.detune.value = cents;
       // pitch scoop: start ~25 cents flat, settle quickly; tiny drop on release
       o.frequency.setValueAtTime(freq * m * 0.986, t0);
       o.frequency.exponentialRampToValueAtTime(freq * m, t0 + 0.07);
       o.frequency.setValueAtTime(freq * m, Math.max(t0 + 0.07, end - rel));
       o.frequency.exponentialRampToValueAtTime(freq * m * 0.993, end + 0.02);
-      const og = ctx.createGain(); og.gain.value = g; o.connect(og); og.connect(body);
+      const og = ctx.createGain(); og.gain.value = g; o.connect(og);
+      if (ctx.createStereoPanner && pan) { const p = ctx.createStereoPanner(); p.pan.value = pan; og.connect(p); p.connect(body); }
+      else og.connect(body);
       return o;
     });
 
@@ -612,7 +609,7 @@
     chiff.connect(cf); cf.connect(cg); cg.connect(voice);
 
     // Amplitude envelope: soft swell, slight settle, quick fade
-    const peak = 0.42 * Math.pow(440 / freq, 0.25);   // keep high notes from sounding shrill
+    const peak = 0.34 * Math.pow(440 / freq, 0.3);   // keep high notes from sounding shrill
     voice.gain.setValueAtTime(0.0001, t0);
     voice.gain.exponentialRampToValueAtTime(peak, t0 + atk);
     voice.gain.setTargetAtTime(peak * 0.82, t0 + atk, 0.12);
@@ -685,7 +682,7 @@
     setHighlight(practiceIdx, practiceIdx - 1);
     $("#pad-big").textContent = `Note ${practiceIdx + 1} of ${seq.length}`;
     $("#pad-next").innerHTML = noteHTML(k);
-    $("#pad-sub").textContent = `Press ${label(k)}, then tap here`;
+    $("#pad-sub").textContent = `Press ${NOTES[k].name}, then tap here`;
   }
   function advancePractice(song) {
     const seq = [...song.seq];
@@ -697,8 +694,8 @@
   /* ---------- Scarecrow editor ---------- */
   function renderKeypad() {
     const kp = $("#keypad"); kp.innerHTML = "";
-    ["A", "D", "R", "L", "U"].forEach(k => {
-      const b = el("button", { "aria-label": "Add " + label(k) }, noteHTML(k));
+    NOTE_ORDER.forEach(k => {
+      const b = el("button", { "aria-label": "Add " + NOTES[k].name }, noteHTML(k));
       b.addEventListener("click", () => {
         ensureAudio(); tone(NOTES[k].freq, 0.4);
         if (scarecrow.seq.length >= 8) return;
@@ -738,12 +735,6 @@
   }
   function route() { const id = location.hash.slice(1); id ? openSong(id) : closeSong(); }
 
-  function setMode(m) {
-    mode = m; store.set("mode", m);
-    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
-    renderLegend(); renderList(); refreshDetail();
-  }
-
   /* ---------- Wake lock ---------- */
   let wakeLock = null, wantWake = false;
   function paintWake() { const b = $("#wake"); b.style.color = wantWake ? "#1a1405" : ""; b.style.background = wantWake ? "var(--gold)" : ""; }
@@ -761,7 +752,6 @@
   }
 
   /* ---------- Wire up ---------- */
-  document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
   $("#back").addEventListener("click", () => { if (history.length > 1 && location.hash) history.back(); else location.hash = ""; });
   $("#play").addEventListener("click", () => current && play(current));
   $("#practice").addEventListener("click", () => current && startPractice(current));
@@ -771,6 +761,7 @@
   $("#wake").addEventListener("click", toggleWake);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && wantWake && !wakeLock) acquireWake(); });
   window.addEventListener("hashchange", route);
+  addEventListener("resize", () => current && renderSeq(current));
 
   // Install tip: show on iOS Safari when not already installed
   const standalone = window.navigator.standalone || matchMedia("(display-mode: standalone)").matches;
@@ -778,7 +769,7 @@
   if (isIOS && !standalone && !store.get("tipDismissed", false)) $("#tip").classList.add("show");
   $("#tip-x").addEventListener("click", () => { $("#tip").classList.remove("show"); store.set("tipDismissed", true); });
 
-  setMode(mode);
+  renderLegend();
   route();
 
   /* ---------- Starfield ---------- */

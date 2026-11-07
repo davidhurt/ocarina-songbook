@@ -1,8 +1,8 @@
 # Ocarina Songbook
 
-A fan-made iPhone web app listing every ocarina song with its controller button sequence, for playing along in the game.
+A fan-made iPhone web app listing every ocarina song with its Switch 2 button sequence, for playing along in the game.
 
-- Notes shown on a staff, with N64 (C-buttons) or Switch Online (right stick) labels
+- Notes shown on a staff as Switch buttons: L, R (shoulders) and A, Y, X (face)
 - **Listen** plays the melody; **Step** walks through one note at a time while you play on your controller
 - Compose and save your own Scarecrow's Song
 - Keep-screen-awake toggle, works offline once installed
