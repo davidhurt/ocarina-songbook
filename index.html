@@ -195,6 +195,18 @@
   .btn:active { transform: translateY(1px); }
   .btn.wide { grid-column: 1 / -1; }
 
+  /* Mic mode toggle */
+  .mic {
+    display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 18px; padding: 10px 14px; cursor: pointer; text-align: left;
+    border-radius: 12px; border: 1px solid var(--gold-dim); background: rgba(0,0,0,.35); color: var(--muted); font: inherit;
+  }
+  .mic svg { width: 26px; height: 26px; flex: none; color: var(--gold-dim); }
+  .mic .mic-text { display: flex; flex-direction: column; gap: 2px; }
+  .mic b { font: 700 13px "Cinzel", serif; letter-spacing: .08em; color: var(--gold-hi); }
+  .mic span span { font-size: 15px; font-style: italic; }
+  .mic[aria-pressed="true"] { border-color: var(--gold); background: rgba(232,199,102,.10); }
+  .mic[aria-pressed="true"] svg { color: var(--gold); }
+
   /* Practice tap pad */
   .pad {
     display: none; margin-top: 14px; min-height: 120px; border-radius: 16px; cursor: pointer;
@@ -269,7 +281,7 @@
       <button aria-label="Dismiss" id="tip-x">×</button>
       Install it: in Safari tap <b>Share</b> → <b>Add to Home Screen</b>. It works offline once added.
     </div>
-    <footer>Fan-made companion. Not affiliated with any game publisher.</footer>
+    <footer>Fan-made companion. Not affiliated with any game publisher. · v4</footer>
   </section>
 
   <!-- DETAIL -->
@@ -304,6 +316,11 @@
         <button class="btn" id="clear">Clear</button>
       </div>
     </div>
+
+    <button class="mic" id="mic" aria-pressed="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      <span class="mic-text"><b id="mic-title">Switch mic mode: On</b><span id="mic-sub">Clean, steady notes for the console microphone</span></span>
+    </button>
 
     <div class="actions">
       <button class="btn primary" id="play">
@@ -378,6 +395,7 @@
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
+  let micMode = store.get("micMode", true);   // clean tone the Switch 2 mic can pick up
   const scarecrow = SONGS.find(s => s.custom);
   scarecrow.seq = store.get("scarecrow", "");
 
@@ -512,7 +530,7 @@
      a constant breath noise that resonates at the played pitch, a soft "chiff"
      as air hits the edge, a slight upward pitch scoop on attack, and a gentle
      vibrato/tremolo that eases in. Played in a small stone-room reverb. */
-  let ctx, master, noiseBuf;
+  let ctx, master, noiseBuf, wetGain;
   function makeNoise(seconds) {
     // Pink-ish noise (Paul Kellet filter) — softer and more breath-like than white noise.
     const len = ctx.sampleRate * seconds | 0, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
@@ -550,12 +568,13 @@
       const comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -14; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.2;
       const verb = ctx.createConvolver(); verb.buffer = makeImpulse(3.4, 2.6);
-      const wet = ctx.createGain(); wet.gain.value = 0.42;
+      const wet = ctx.createGain(); wet.gain.value = 0.42; wetGain = wet;
       const pre = ctx.createDelay(); pre.delayTime.value = 0.035;
       master.connect(warm); warm.connect(soft); soft.connect(comp);
       soft.connect(pre); pre.connect(verb); verb.connect(wet); wet.connect(comp);
       comp.connect(ctx.destination);
     }
+    wetGain.gain.value = micMode ? 0 : 0.42;
     if (ctx.state === "suspended") ctx.resume();
   }
   function tone(freq, dur, when = 0) {
@@ -568,7 +587,10 @@
     const body = ctx.createBiquadFilter(); body.type = "lowpass"; body.frequency.value = freq * 3.2; body.Q.value = 0.5;
     body.connect(voice);
     // [multiple, gain, detune in cents, pan]
-    const partials = [[1, 1, 0, -0.15], [1, 0.38, 6, 0.25], [0.5, 0.11, 0, 0], [2, 0.05, 0, 0], [3, 0.028, 0, 0]];
+    // Mic mode keeps a steady, clean pitch (no low octave, chorus or wobble) so the console can recognise each note.
+    const partials = micMode
+      ? [[1, 1, 0, 0], [2, 0.03, 0, 0]]
+      : [[1, 1, 0, -0.15], [1, 0.38, 6, 0.25], [0.5, 0.11, 0, 0], [2, 0.05, 0, 0], [3, 0.028, 0, 0]];
     const oscs = partials.map(([m, g, cents, pan]) => {
       const o = ctx.createOscillator(); o.type = "sine"; o.detune.value = cents;
       // pitch scoop: start ~25 cents flat, settle quickly; tiny drop on release
@@ -585,9 +607,9 @@
     // Delayed vibrato (pitch) + tremolo (volume)
     const lfo = ctx.createOscillator(); lfo.frequency.value = 4.8 + Math.random() * 0.6;
     const vib = ctx.createGain(); const vibOn = Math.min(end, t0 + 0.28);
-    vib.gain.setValueAtTime(0, t0); vib.gain.setValueAtTime(0, vibOn); vib.gain.linearRampToValueAtTime(freq * 0.006, Math.min(end, vibOn + 0.35));
+    vib.gain.setValueAtTime(0, t0); vib.gain.setValueAtTime(0, vibOn); vib.gain.linearRampToValueAtTime(micMode ? 0 : freq * 0.006, Math.min(end, vibOn + 0.35));
     lfo.connect(vib); oscs.forEach(o => vib.connect(o.frequency));
-    const trem = ctx.createGain(); trem.gain.setValueAtTime(0, t0); trem.gain.setValueAtTime(0, vibOn); trem.gain.linearRampToValueAtTime(0.06, Math.min(end, vibOn + 0.35));
+    const trem = ctx.createGain(); trem.gain.setValueAtTime(0, t0); trem.gain.setValueAtTime(0, vibOn); trem.gain.linearRampToValueAtTime(micMode ? 0 : 0.06, Math.min(end, vibOn + 0.35));
     const tremBus = ctx.createGain(); tremBus.gain.value = 1;
     lfo.connect(trem); trem.connect(tremBus.gain);
     body.disconnect(); body.connect(tremBus); tremBus.connect(voice);
@@ -595,7 +617,7 @@
     // Breath: noise resonating at the note (the vessel), plus a little airy hiss
     const breath = ctx.createBufferSource(); breath.buffer = noiseBuf; breath.loop = true;
     const res = ctx.createBiquadFilter(); res.type = "bandpass"; res.frequency.value = freq; res.Q.value = 9;
-    const resG = ctx.createGain(); resG.gain.value = 0.55;
+    const resG = ctx.createGain(); resG.gain.value = micMode ? 0.18 : 0.55;
     const hiss = ctx.createBiquadFilter(); hiss.type = "bandpass"; hiss.frequency.value = 3200; hiss.Q.value = 0.8;
     const hissG = ctx.createGain(); hissG.gain.value = 0.035;
     breath.connect(res); res.connect(resG); resG.connect(voice);
@@ -605,11 +627,11 @@
     const chiff = ctx.createBufferSource(); chiff.buffer = noiseBuf;
     const cf = ctx.createBiquadFilter(); cf.type = "bandpass"; cf.frequency.value = freq * 4; cf.Q.value = 1.2;
     const cg = ctx.createGain();
-    cg.gain.setValueAtTime(0, t0); cg.gain.linearRampToValueAtTime(0.22, t0 + 0.008); cg.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.07);
+    cg.gain.setValueAtTime(0, t0); cg.gain.linearRampToValueAtTime(micMode ? 0.08 : 0.22, t0 + 0.008); cg.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.07);
     chiff.connect(cf); cf.connect(cg); cg.connect(voice);
 
     // Amplitude envelope: soft swell, slight settle, quick fade
-    const peak = 0.34 * Math.pow(440 / freq, 0.3);   // keep high notes from sounding shrill
+    const peak = (micMode ? 0.5 : 0.34) * Math.pow(440 / freq, 0.3);   // keep high notes from sounding shrill
     voice.gain.setValueAtTime(0.0001, t0);
     voice.gain.exponentialRampToValueAtTime(peak, t0 + atk);
     voice.gain.setTargetAtTime(peak * 0.82, t0 + atk, 0.12);
@@ -641,11 +663,11 @@
     playing = true; setPlayBtn(true);
     const seq = [...song.seq];
     const beats = song.beats && song.beats.length === seq.length ? song.beats : seq.map(() => 1.5);
-    const unit = song.tempo || 0.22;
+    const unit = (song.tempo || 0.22) * (micMode ? 1.35 : 1);
     let t = 0.08;
     seq.forEach((k, i) => {
       const dur = beats[i] * unit;
-      tone(NOTES[k].freq, Math.max(0.2, dur * 0.97), t);
+      tone(NOTES[k].freq, micMode ? Math.max(0.3, dur * 0.85) : Math.max(0.2, dur * 0.97), t);
       playTimers.push(setTimeout(() => setHighlight(i, i - 1), t * 1000));
       t += dur;
     });
@@ -759,6 +781,13 @@
   $("#undo").addEventListener("click", () => { scarecrow.seq = scarecrow.seq.slice(0, -1); store.set("scarecrow", scarecrow.seq); refreshDetail(); });
   $("#clear").addEventListener("click", () => { scarecrow.seq = ""; store.set("scarecrow", ""); exitPractice(); refreshDetail(); });
   $("#wake").addEventListener("click", toggleWake);
+  function paintMic() {
+    $("#mic").setAttribute("aria-pressed", String(micMode));
+    $("#mic-title").textContent = "Switch mic mode: " + (micMode ? "On" : "Off");
+    $("#mic-sub").textContent = micMode ? "Clean, steady notes for the console microphone" : "Full, rich ocarina sound for listening";
+  }
+  $("#mic").addEventListener("click", () => { micMode = !micMode; store.set("micMode", micMode); stopPlayback(); paintMic(); });
+  paintMic();
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && wantWake && !wakeLock) acquireWake(); });
   window.addEventListener("hashchange", route);
   addEventListener("resize", () => current && renderSeq(current));
@@ -797,7 +826,14 @@
   sizeStars(); addEventListener("resize", sizeStars); requestAnimationFrame(drawStars);
 
   // Offline support
-  if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  // Always check for a newer version, and reload once when it takes over.
+  if ("serviceWorker" in navigator) {
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (!reloaded) { reloaded = true; location.reload(); } });
+    addEventListener("load", () => navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+      .then(reg => { reg.update(); document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update(); }); })
+      .catch(() => {}));
+  }
 })();
 </script>
 </body>
